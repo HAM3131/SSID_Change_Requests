@@ -21,13 +21,31 @@ class SSID:
         """
         try:
             self.filename = name + '.xlsm'
-            self.source_path = self.filename
             self.tmp_path = os.path.join('tmp', self.filename)
             self.name = name
             self.error_logging = args.error_logging
             self.summary = ''
             self.errored = False
 
+            # Determine source path
+            self.source_path = os.path.join(args.input_path, self.filename)
+            # Excel file with name of SSID isn't present in input directory. Check for dir
+            if not os.path.isfile(self.source_path):
+                ssid_folder = os.path.join(args.input_path, name)
+                max_mtime = 0
+                if os.path.isdir(ssid_folder) and len(os.listdir(ssid_folder)) > 0:
+                    for entry in os.listdir(os.path.join(args.input_path, name)):
+                        full_path = os.path.join(ssid_folder, entry)
+                        mtime = os.stat(full_path).st_mtime
+                        if mtime > max_mtime:
+                            max_mtime = mtime
+                            self.source_path = full_path
+                else:
+                    raise ValueError(f'No path found to source file for SSID `{name}`')
+            
+            if not self.source_path.endswith('.xlsm'):
+                raise ValueError(f'Source path found for SSID `{name}` but file is not `.xlsm`: {self.source_path}')
+            
             # Determine output to finally save file
             if args.file_input and args.output is not None:
                 if not os.path.exists(args.output):
@@ -152,10 +170,10 @@ class SSID:
                 with open(self.output_path, 'wb') as f:
                     f.write(contents)
                 print(f'SSID `{self.name}` completed and output at {self.output_path}')
+                os.remove(self.tmp_path)
             else:
                 print(f'SSID `{self.name}` errored during process - cannot save')
-            os.remove(self.tmp_path)
-            if len(os.listdir('tmp')) == 0:
+            if os.path.isdir('tmp') and len(os.listdir('tmp')) == 0:
                 os.rmdir('tmp')
         except Exception as e:
             self.errored = True
@@ -191,6 +209,12 @@ def parse_args():
                         '--file-input',
                         action='store_true',
                         help='Specify a text file with a different SSID on each line instead of a single SSID to change')
+
+    parser.add_argument('-i',
+                        '--input-path',
+                        type=str,
+                        default='\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms',
+                        help='Path to find SSID spreadsheets in. Defaults to `\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms`')
     
     parser.add_argument('-o',
                         '--output',
@@ -202,15 +226,7 @@ def parse_args():
 
     return parsed_args
 
-def main():
-    """Generate new excel sheet
-    
-    return: status
-        0 if success, 1 if any errors are encountered
-    """
-    status = 0
-    args = parse_args()
-
+def get_ssid_list(args):
     if args.file_input:
         with open(args.filename) as f:
             ssid_names = [line.strip() for line in f.readlines()]
@@ -218,12 +234,33 @@ def main():
     else:
         SSIDs = [SSID(args.filename, args)]
     
-    for ssid in SSIDs:
-        if args.change_primary_manager is not None:
-            ssid.change_primary_manager(args)
-        
-        ssid.write_summary()
-        ssid.output()
+    return SSIDs
+
+def execute_changes(SSIDs, args):
+    if args.change_primary_manager is not None:
+        print('\033[1;34m***Changing primary manager***\033[22;0m')
+        [ssid.change_primary_manager(args) for ssid in SSIDs if not ssid.errored]
+    
+    print('\033[1;34m***Writing change summaries***\033[22;0m')
+    [ssid.write_summary() for ssid in SSIDs if not ssid.errored]
+    
+    print('\033[1;34m***Saving successfully modified files***\033[22;0m')
+    [ssid.output() for ssid in SSIDs if not ssid.errored]
+
+    successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
+    print(f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
+
+def main():
+    """Generate new excel sheet
+    
+    return: status
+        0 if success, 1 if any errors are encountered
+    """
+    status = 0
+    
+    args = parse_args()
+    SSIDs = get_ssid_list(args)
+    execute_changes(SSIDs, args)
 
     return status
 
