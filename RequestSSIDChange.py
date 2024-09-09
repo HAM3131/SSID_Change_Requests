@@ -24,6 +24,7 @@ class SSID:
             self.tmp_path = os.path.join('tmp', self.filename)
             self.name = name
             self.error_logging = args.error_logging
+            self.logs = ''
             self.summary = ''
             self.errored = False
 
@@ -70,8 +71,13 @@ class SSID:
 
         except Exception as e:
             self.errored = True
+            error = f'SSID.__init__(`{name}`, args): {e}'
+            self.logs += error + '\n'
             if self.error_logging:
-                print(f'SSID.__init__(`{name}`, args): {e}')
+                print(error)
+        
+        else:
+            self.logs += f'SSID `{self.name}` initialized successfully\n'
         
     def change_primary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a primary manager change
@@ -102,24 +108,41 @@ class SSID:
             
             wb.save(self.tmp_path)
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
+        
         except Exception as e:
             self.errored = True
+            error = f'SSID.change_primary_manager(): {e}'
+            self.logs += error + '\n'
             if self.error_logging:
-                print('SSID.change_primary_manager():', e)
+                print(error)
+        
+        else:
+            self.logs += f'Manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
     
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
         """
-        # Load the workbook in `tmp` directory
-        wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+        try:
+            # Load the workbook in `tmp` directory
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            
+            # Remove legacy drawings from broken pages
+            wb['DB2 UNIX'].legacy_drawing = None
+            wb['Mainframe'].legacy_drawing = None
+            wb['Other'].legacy_drawing = None
+            
+            # Save workbook back to `tmp` folder
+            wb.save(self.tmp_path)
+
+        except Exception as e:
+            self.errored = True
+            error = f'SSID.remove_legacy_drawings(): {e}'
+            self.logs += error + '\n'
+            if self.error_logging:
+                print(error)
         
-        # Remove legacy drawings from broken pages
-        wb['DB2 UNIX'].legacy_drawing = None
-        wb['Mainframe'].legacy_drawing = None
-        wb['Other'].legacy_drawing = None
-        
-        # Save workbook back to `tmp` folder
-        wb.save(self.tmp_path)
+        else:
+            self.logs += f'Legacy drawings removed from SSID `{self.name}` successfully\n'
 
     def write_summary(self):
         """Write the summary of all actions taken onto the `Summary` page
@@ -157,11 +180,17 @@ class SSID:
             ws['A13'] = datetime.today().strftime('%m/%d/%Y')
             ws['B12'] = 'REQ'
             ws['C12'] = self.summary
+
         except Exception as e:
             self.errored = True
+            error = f'SSID.write_summary(): {e}'
+            self.logs += error + '\n'
             if self.error_logging:
-                print('SSID.write_summary():', e)
-    
+                print(error)
+
+        else:
+            self.logs += f'Summary written for SSID `{self.name}` successfully\n'
+
     def output(self):
         try:
             if not self.errored:
@@ -177,8 +206,28 @@ class SSID:
                 os.rmdir('tmp')
         except Exception as e:
             self.errored = True
+            error = f'SSID.output(): {e}'
+            self.logs += error + '\n'
             if self.error_logging:
-                print('SSID.output():', e)
+                print(error)
+        
+        else:
+            self.logs += f'SSID `{self.name}` output successfully\n'
+        
+    def log(self):
+        path = 'logs'
+        if self.errored:
+            path = os.path.join(path, 'fail')
+        else:
+            path = os.path.join(path, 'success')
+        
+        if not os.path.isdir(path):
+            os.makedirs(path)
+
+        path = os.path.join(path, self.name + '.log')
+
+        with open(path, 'w') as f:
+            f.write(self.logs)
 
 def parse_args():
     """Define an argparse parser and return the parsed arguments
@@ -249,6 +298,8 @@ def execute_changes(args):
     
     print('\033[1;34m***Saving successfully modified files***\033[22;0m')
     [ssid.output() for ssid in SSIDs if not ssid.errored]
+
+    [ssid.log() for ssid in SSIDs]
 
     successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
     print(f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
