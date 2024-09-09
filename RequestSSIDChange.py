@@ -9,6 +9,11 @@ from copy import copy
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side
 from datetime import datetime
+import win32com.client as win32
+import time
+
+excel = win32.gencache.EnsureDispatch('Excel.Application')
+excel.DisplayAlerts=False
 
 class SSID:
     def __init__(self, name, args):
@@ -44,9 +49,6 @@ class SSID:
                 else:
                     raise ValueError(f'No path found to source file for SSID `{name}`')
             
-            if not self.source_path.endswith('.xlsm'):
-                raise ValueError(f'Source path found for SSID `{name}` but file is not `.xlsm`: {self.source_path}')
-            
             # Determine output to finally save file
             if args.file_input and args.output is not None:
                 if not os.path.exists(args.output):
@@ -64,10 +66,13 @@ class SSID:
                 os.makedirs('tmp')
 
             # Copy file into tmp folder for working
-            with open(self.source_path, 'rb') as f:
-                contents = f.read()
-            with open(self.tmp_path, 'wb') as f:
-                f.write(contents)
+            if not self.source_path.endswith('.xlsm'):
+                copy_excel_as_xlsm(self.source_path, os.path.join(os.getcwd(), self.tmp_path))
+            else:
+                with open(self.source_path, 'rb') as f:
+                    contents = f.read()
+                with open(self.tmp_path) as f:
+                    f.write(contents)
 
         except Exception as e:
             self.errored = True
@@ -233,6 +238,14 @@ class SSID:
         with open(path, 'w') as f:
             f.write(self.logs)
 
+def copy_excel_as_xlsm(source_path, output_path):
+     try:
+        wb = excel.Workbooks.Open(source_path)
+        wb.SaveAs(output_path, 52)
+        wb.Close(SaveChanges=False)
+     except IOError:
+        print('Error')
+
 def parse_args():
     """Define an argparse parser and return the parsed arguments
 
@@ -312,6 +325,9 @@ def execute_changes(args):
     
     print('\033[1;34m***Writing change summaries***\033[22;0m')
     [ssid.write_summary() for ssid in SSIDs if not ssid.errored]
+
+    # Remove legacy drawings
+    [ssid.remove_legacy_drawings() for ssid in SSIDs if not ssid.errored]
     
     print('\033[1;34m***Saving successfully modified files***\033[22;0m')
     [ssid.output() for ssid in SSIDs if not ssid.errored]
@@ -336,3 +352,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+excel.Quit()
