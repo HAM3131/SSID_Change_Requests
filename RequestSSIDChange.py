@@ -29,13 +29,13 @@ class SSID:
             self.errored = False
 
             # Determine source path
-            self.source_path = os.path.join(args.self.tmp_dir, self.filename)
+            self.source_path = os.path.join(args.input_dir, self.filename)
             # Excel file with name of SSID isn't present in input directory. Check for dir
             if not os.path.isfile(self.source_path):
-                ssid_folder = os.path.join(args.self.tmp_dir, name)
+                ssid_folder = os.path.join(args.input_dir, name)
                 max_mtime = 0
                 if os.path.isdir(ssid_folder) and len(os.listdir(ssid_folder)) > 0:
-                    for entry in os.listdir(os.path.join(args.self.tmp_dir, name)):
+                    for entry in os.listdir(os.path.join(args.input_dir, name)):
                         full_path = os.path.join(ssid_folder, entry)
                         mtime = os.stat(full_path).st_mtime
                         if mtime > max_mtime:
