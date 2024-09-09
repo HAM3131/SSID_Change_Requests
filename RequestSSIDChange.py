@@ -267,7 +267,7 @@ def parse_args():
                         '--input-dir',
                         type=str,
                         default='\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms',
-                        help='Path to find SSID spreadsheets in. Defaults to `\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms`')
+                        help='Path to dir which SSID spreadsheets are in. Defaults to `\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms`')
     
     parser.add_argument('-o',
                         '--output',
