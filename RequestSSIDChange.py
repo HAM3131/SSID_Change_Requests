@@ -29,13 +29,13 @@ class SSID:
             self.errored = False
 
             # Determine source path
-            self.source_path = os.path.join(args.input_path, self.filename)
+            self.source_path = os.path.join(args.self.tmp_dir, self.filename)
             # Excel file with name of SSID isn't present in input directory. Check for dir
             if not os.path.isfile(self.source_path):
-                ssid_folder = os.path.join(args.input_path, name)
+                ssid_folder = os.path.join(args.self.tmp_dir, name)
                 max_mtime = 0
                 if os.path.isdir(ssid_folder) and len(os.listdir(ssid_folder)) > 0:
-                    for entry in os.listdir(os.path.join(args.input_path, name)):
+                    for entry in os.listdir(os.path.join(args.self.tmp_dir, name)):
                         full_path = os.path.join(ssid_folder, entry)
                         mtime = os.stat(full_path).st_mtime
                         if mtime > max_mtime:
@@ -264,7 +264,7 @@ def parse_args():
                         help='Specify a text file with a different SSID on each line instead of a single SSID to change')
 
     parser.add_argument('-i',
-                        '--input-path',
+                        '--input-dir',
                         type=str,
                         default='\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms',
                         help='Path to find SSID spreadsheets in. Defaults to `\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms`')
