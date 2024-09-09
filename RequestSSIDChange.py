@@ -1,7 +1,7 @@
 # RequestSSIDChange
 # Purpose: Generate Excel sheet for SSID Change requests
 # Author: Henry Manning
-# Version: 0.0.2
+# Version: 0.0.3
 
 import argparse
 import os
@@ -192,6 +192,8 @@ class SSID:
             self.logs += f'Summary written for SSID `{self.name}` successfully\n'
 
     def output(self):
+        """Save the spreadsheet to the final output destination
+        """
         try:
             if not self.errored:
                 with open(self.tmp_path, 'rb') as f:
@@ -215,6 +217,8 @@ class SSID:
             self.logs += f'SSID `{self.name}` output successfully\n'
         
     def log(self):
+        """Write logs for SSID
+        """
         path = 'logs'
         if self.errored:
             path = os.path.join(path, 'fail')
@@ -276,6 +280,14 @@ def parse_args():
     return parsed_args
 
 def get_ssid_list(args):
+    """Generate list of SSID objects from input
+
+    param: args
+        Namespace including `file_input` and `filename`
+    
+    return: SSIDs
+        list of SSID objects
+    """
     if args.file_input:
         with open(args.filename) as f:
             ssid_names = [line.strip() for line in f.readlines()]
@@ -286,6 +298,11 @@ def get_ssid_list(args):
     return SSIDs
 
 def execute_changes(args):
+    """Initialize list of SSIDs, make appropriate edits to spreadsheets, and save
+
+    param: args
+        Namespace including `change_primary_manager` and other key details of command line arguments
+    """
     print('\033[1;34m***Initializing SSID objects***\033[22;0m')
     SSIDs = get_ssid_list(args)
 
