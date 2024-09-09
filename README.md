@@ -11,3 +11,26 @@ $ pip install openpyxl
 You must also ensure that your spreadsheet is a `.xlsm` file. The `.xls` extension will not work, so you need to save a new version with the correct extension if this applies.
 
 In addition, "legacy drawings" included on the `DB2 UNIX`, `Mainframe`, and `Other` sheets are broken and must be removed. These "legacy drawings" are just buttons attached to macros which are meant to insert rows and headers automatically in order to simplify/accelerate manual data entry. If using this program, that will no longer be necessary.
+
+## Command line
+Example:
+```
+$ python3 RequestSSIDChange.py -cpm "New Manager" airflow
+    # Modifies spreadsheet for `airflow` SSID to change the primary manager to "New Manager"
+
+$ python3 RequestSSIDChange.py -cpm "New Manager" -f ssid_list -o output_dir
+    # Modifies spreadsheets for each SSID listed in `ssid_list` file with a new primary manager and places them inside of `output_dir`
+```
+
+* **Positional Arguments**
+    * `filename`
+        * The name of the SSID you want to edit the excel file for, or, if the optional `-f` flag is used, a text file with unique SSIDs on each line
+* **Optional Flags**
+    * `-cpm, --change-primary-manager`
+        * Name of new primary manager
+    * `-e, --error-logging`
+        * Flag to set for error logging
+    * `-f, --file-input`
+        * Flag to use text file with multiple SSIDs as input, instead of just one
+    * `-o, --output`
+        * Name of file to output to, or directory if using `-f` flag.
