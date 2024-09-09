@@ -236,7 +236,10 @@ def get_ssid_list(args):
     
     return SSIDs
 
-def execute_changes(SSIDs, args):
+def execute_changes(args):
+    print('\033[1;34m***Initializing SSID objects***\033[22;0m')
+    SSIDs = get_ssid_list(args)
+
     if args.change_primary_manager is not None:
         print('\033[1;34m***Changing primary manager***\033[22;0m')
         [ssid.change_primary_manager(args) for ssid in SSIDs if not ssid.errored]
@@ -257,10 +260,9 @@ def main():
         0 if success, 1 if any errors are encountered
     """
     status = 0
-    
+
     args = parse_args()
-    SSIDs = get_ssid_list(args)
-    execute_changes(SSIDs, args)
+    execute_changes(args)
 
     return status
 
