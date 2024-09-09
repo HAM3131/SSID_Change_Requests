@@ -2,6 +2,7 @@
 .venv
 tmp
 output
+logs
 
 # Files
 test
