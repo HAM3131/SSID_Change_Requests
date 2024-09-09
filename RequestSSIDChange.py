@@ -177,6 +177,11 @@ def parse_args():
                         type=str,
                         help='Name of the SSID being managed')
                         
+    parser.add_argument('-cpm',
+                        '--change-primary-manager',
+                        type=str,
+                        help='Name of new primary manager')
+
     parser.add_argument('-e',
                         '--error-logging',
                         action='store_true',
@@ -186,11 +191,6 @@ def parse_args():
                         '--file-input',
                         action='store_true',
                         help='Specify a text file with a different SSID on each line instead of a single SSID to change')
-    
-    parser.add_argument('-cpm',
-                        '--change-primary-manager',
-                        type=str,
-                        help='Name of new primary manager')
     
     parser.add_argument('-o',
                         '--output',
