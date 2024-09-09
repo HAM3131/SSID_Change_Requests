@@ -32,5 +32,7 @@ $ python3 RequestSSIDChange.py -cpm "New Manager" -f ssid_list -o output_dir
         * Flag to set for error logging
     * `-f, --file-input`
         * Flag to use text file with multiple SSIDs as input, instead of just one
+    * `-i, --input-dir`
+        * Specify directory to look for SSID spreadsheets in. Defaults to "\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms"
     * `-o, --output`
         * Name of file to output to, or directory if using `-f` flag.
