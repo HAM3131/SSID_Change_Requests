@@ -1,0 +1,8 @@
+# Directories
+.venv
+tmp
+output
+
+# Files
+test
+*.xlsm
