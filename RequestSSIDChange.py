@@ -1,7 +1,7 @@
 # RequestSSIDChange
 # Purpose: Generate Excel sheet for SSID Change requests
 # Author: Henry Manning
-# Version: 0.0.3
+# Version: 0.0.4
 
 import argparse
 import os
@@ -71,7 +71,7 @@ class SSID:
             else:
                 with open(self.source_path, 'rb') as f:
                     contents = f.read()
-                with open(self.tmp_path) as f:
+                with open(self.tmp_path, 'wb') as f:
                     f.write(contents)
 
         except Exception as e:
@@ -105,6 +105,21 @@ class SSID:
             ws['B30'] = new_manager
 
             # Modify `Previous Ownership` sheet
+            if not 'Previous Ownership' in wb:
+                wb.create_sheet('Previous Ownership')
+                ws = wb['Previous Ownership']
+                ws['A4'] = 'TITLE'
+                ws['B4'] = 'NAME'
+                ws['C4'] = 'DEPARTMENT'
+                ws['D4'] = 'SIGNATURE & DATE'
+                ws['A6'] = 'Primary Manager'
+                ws['A13'] = 'Secondary Manager'
+                ws['A19'] = 'Primary Account Custodian'
+                ws['A26'] = 'Secondary Account Custodian'
+                ws['A30'] = 'Authorized User(s)'
+                ws['A43'] = 'Authorized User\'s Manager'
+                ws['A47'] = 'ISO Representative(s)'
+
             ws = wb['Previous Ownership']
             ws.insert_rows(6)
             ws.move_range('A7', rows=-1)
@@ -116,7 +131,7 @@ class SSID:
         
         except Exception as e:
             self.errored = True
-            error = f'SSID.change_primary_manager(): {e}'
+            error = f'`{self.name}` - SSID.change_primary_manager(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -131,17 +146,17 @@ class SSID:
             # Load the workbook in `tmp` directory
             wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
             
+            broken_drawings = ['DB2 UNIX', 'DB2 AIX', 'Mainframe', 'Other']
             # Remove legacy drawings from broken pages
-            wb['DB2 UNIX'].legacy_drawing = None
-            wb['Mainframe'].legacy_drawing = None
-            wb['Other'].legacy_drawing = None
+            for sheet in list(set(broken_drawings) & set([sheet.title for sheet in wb._sheets])):
+                wb[sheet].legacy_drawing = None
             
             # Save workbook back to `tmp` folder
             wb.save(self.tmp_path)
 
         except Exception as e:
             self.errored = True
-            error = f'SSID.remove_legacy_drawings(): {e}'
+            error = f'`{self.name}` - SSID.remove_legacy_drawings(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -157,7 +172,8 @@ class SSID:
                 raise ValueError('Summary is empty, no changes have been made. Cannot create summary')
 
             # Modify `Summary` sheet
-            ws = load_workbook(self.tmp_path, read_only=False, keep_vba=True)['Summary']
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            ws = wb['Summary']
             merged_cells_range = ws.merged_cells.ranges
             for merged_cell in merged_cells_range:
                 _, top, _, _ = merged_cell.bounds
@@ -186,9 +202,12 @@ class SSID:
             ws['B12'] = 'REQ'
             ws['C12'] = self.summary
 
+            # Save workbook
+            wb.save(self.tmp_path)
+
         except Exception as e:
             self.errored = True
-            error = f'SSID.write_summary(): {e}'
+            error = f'`{self.name}` - SSID.write_summary(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -213,7 +232,7 @@ class SSID:
                 os.rmdir('tmp')
         except Exception as e:
             self.errored = True
-            error = f'SSID.output(): {e}'
+            error = f'`{self.name}` - SSID.output(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
