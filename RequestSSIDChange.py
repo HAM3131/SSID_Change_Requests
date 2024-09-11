@@ -76,7 +76,7 @@ class SSID:
 
         except Exception as e:
             self.errored = True
-            error = f'SSID.__init__(`{name}`, args): {e}'
+            error = f'ERROR: SSID.__init__(`{name}`, args): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -131,7 +131,7 @@ class SSID:
         
         except Exception as e:
             self.errored = True
-            error = f'`{self.name}` - SSID.change_primary_manager(): {e}'
+            error = f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -156,7 +156,7 @@ class SSID:
 
         except Exception as e:
             self.errored = True
-            error = f'`{self.name}` - SSID.remove_legacy_drawings(): {e}'
+            error = f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -207,7 +207,7 @@ class SSID:
 
         except Exception as e:
             self.errored = True
-            error = f'`{self.name}` - SSID.write_summary(): {e}'
+            error = f'ERROR: `{self.name}` - SSID.write_summary(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
@@ -232,7 +232,7 @@ class SSID:
                 os.rmdir('tmp')
         except Exception as e:
             self.errored = True
-            error = f'`{self.name}` - SSID.output(): {e}'
+            error = f'ERROR: `{self.name}` - SSID.output(): {e}'
             self.logs += error + '\n'
             if self.error_logging:
                 print(error)
