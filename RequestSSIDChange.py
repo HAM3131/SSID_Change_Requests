@@ -29,7 +29,8 @@ class SSID:
             self.tmp_path = os.path.join('tmp', self.filename)
             self.name = name
             self.error_logging = args.error_logging
-            self.logs = ''
+            self.master_log_path = args.log_path
+            self.log_path = os.path.join(os.path.dirname(args.log_path), f'{name}.log')
             self.summary = ''
             self.errored = False
 
@@ -75,14 +76,25 @@ class SSID:
                     f.write(contents)
 
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: SSID.__init__(`{name}`, args): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}')
         
         else:
-            self.logs += f'SSID `{self.name}` initialized successfully\n'
+            self.log(f'SSID `{self.name}` initialized successfully')
+
+    def log(self, message):
+        with open(self.master_log_path, 'a') as f:
+            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+        with open(self.log_path, 'a') as f:
+            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+        
+    def log_error(self, message):
+        self.errored = True
+        with open(self.master_log_path, 'a') as f:
+            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+        with open(self.log_path, 'a') as f:
+            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+        if self.error_logging:
+            print(message + f' [{datetime.now().strftime("%H:%M:%S")}]')
         
     def change_primary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a primary manager change
@@ -112,14 +124,10 @@ class SSID:
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
-        
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}')
+            
         else:
-            self.logs += f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
+            self.log(f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
     
     def change_secondary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a secondary manager change
@@ -149,15 +157,11 @@ class SSID:
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}')
             return False
         
         else:
-            self.logs += f'Secondary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
+            self.log(f'Secondary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
             return True
 
     def change_manager(self, args):
@@ -181,20 +185,16 @@ class SSID:
             if secondary_manager is None:
                 secondary_manager = ''
             if primary_manager.lower() == old_manager.lower():
-                self.logs += f'change_manager() selected `primary manager` for SSID `{self.name}`\n'
+                self.log(f'change_manager() selected `primary manager` for SSID `{self.name}`')
                 self.change_primary_manager(args.change_manager)
             elif secondary_manager.lower() == old_manager.lower():
-                self.logs += f'change_manager() selected `secondary manager` for SSID `{self.name}`\n'
+                self.log(f'change_manager() selected `secondary manager` for SSID `{self.name}`')
                 self.change_secondary_manager(args.change_manager)
             else:
                 raise ValueError(f'Neither primary nor secondary manager matches expected previous manager: `{old_manager}`')
         
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.change_manager(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_manager(): {e}')
 
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
@@ -212,14 +212,10 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
+            self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}')
         
         else:
-            self.logs += f'Legacy drawings removed from SSID `{self.name}` successfully\n'
+            self.log(f'Legacy drawings removed from SSID `{self.name}` successfully')
 
     def write_summary(self):
         """Write the summary of all actions taken onto the `Summary` page
@@ -263,14 +259,10 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.write_summary(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
+            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}')
 
         else:
-            self.logs += f'Summary written for SSID `{self.name}` successfully\n'
+            self.log(f'Summary written for SSID `{self.name}` successfully')
 
     def modify_previous_ownership(self, wb, field, name='', dept=''):
         """Modify the `Previous Ownership` sheet
@@ -331,31 +323,10 @@ class SSID:
             if os.path.isdir('tmp') and len(os.listdir('tmp')) == 0:
                 os.rmdir('tmp')
         except ValueError as e:
-            self.errored = True
-            error = f'ERROR: `{self.name}` - SSID.output(): {e}'
-            self.logs += error + '\n'
-            if self.error_logging:
-                print(error)
-        
-        else:
-            self.logs += f'SSID `{self.name}` output successfully\n'
-        
-    def log(self):
-        """Write logs for SSID
-        """
-        path = 'logs'
-        if self.errored:
-            path = os.path.join(path, 'fail')
-        else:
-            path = os.path.join(path, 'success')
-        
-        if not os.path.isdir(path):
-            os.makedirs(path)
+            self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}')
 
-        path = os.path.join(path, self.name + '.log')
-
-        with open(path, 'w') as f:
-            f.write(self.logs)
+        else:
+            self.log(f'SSID `{self.name}` output successfully')
 
 def copy_excel_as_xlsm(source_path, output_path):
      try:
@@ -488,10 +459,17 @@ def execute_changes(args):
     print('\033[1;34m***Saving successfully modified files***\033[22;0m')
     [ssid.output() for ssid in SSIDs if not ssid.errored]
 
-    [ssid.log() for ssid in SSIDs]
-
     successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
     print(f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
+
+def create_log_file():
+    log_path = os.path.join('logs', datetime.now().strftime('%Y-%m-%d_%H%M%S'))
+    if not os.path.isdir(log_path):
+        os.makedirs(log_path)
+    log_path = os.path.join(log_path, 'SSID_Changes.log')
+    with open(log_path, 'w') as f:
+        f.write(f'[{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}] Log Created\n')
+    return log_path
 
 def main():
     """Generate new excel sheet
@@ -503,6 +481,7 @@ def main():
 
     try:
         args = parse_args()
+        args.log_path = create_log_file()
         execute_changes(args)
     except ValueError as e:
         print(e)
