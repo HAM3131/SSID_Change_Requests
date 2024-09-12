@@ -74,7 +74,7 @@ class SSID:
                 with open(self.tmp_path, 'wb') as f:
                     f.write(contents)
 
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: SSID.__init__(`{name}`, args): {e}'
             self.logs += error + '\n'
@@ -111,7 +111,7 @@ class SSID:
             wb.save(self.tmp_path)
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
         
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}'
             self.logs += error + '\n'
@@ -148,7 +148,7 @@ class SSID:
             wb.save(self.tmp_path)
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
         
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}'
             self.logs += error + '\n'
@@ -189,7 +189,7 @@ class SSID:
             else:
                 raise ValueError(f'Neither primary nor secondary manager matches expected previous manager: `{old_manager}`')
         
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.change_manager(): {e}'
             self.logs += error + '\n'
@@ -211,7 +211,7 @@ class SSID:
             # Save workbook back to `tmp` folder
             wb.save(self.tmp_path)
 
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}'
             self.logs += error + '\n'
@@ -262,7 +262,7 @@ class SSID:
             # Save workbook
             wb.save(self.tmp_path)
 
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.write_summary(): {e}'
             self.logs += error + '\n'
@@ -319,7 +319,7 @@ class SSID:
                 print(f'SSID `{self.name}` errored during process - cannot save')
             if os.path.isdir('tmp') and len(os.listdir('tmp')) == 0:
                 os.rmdir('tmp')
-        except Exception as e:
+        except ValueError as e:
             self.errored = True
             error = f'ERROR: `{self.name}` - SSID.output(): {e}'
             self.logs += error + '\n'
@@ -493,7 +493,7 @@ def main():
     try:
         args = parse_args()
         execute_changes(args)
-    except Exception as e:
+    except ValueError as e:
         print(e)
 
     return status
