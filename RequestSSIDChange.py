@@ -1,7 +1,7 @@
 # RequestSSIDChange
 # Purpose: Generate Excel sheet for SSID Change requests
 # Author: Henry Manning
-# Version: 0.0.4
+# Version: 0.0.5
 
 import argparse
 import os
@@ -53,7 +53,7 @@ class SSID:
             if args.file_input and args.output is not None:
                 if not os.path.exists(args.output):
                     os.makedirs(args.output)
-                self.output_path = os.path.join(args.output, name + datetime.today().strftime('%Y-%m-%d') + '.xlsm')
+                self.output_path = os.path.join(args.output, name + '_' + datetime.today().strftime('%Y-%m-%d') + '.xlsm')
             elif args.output is not None:
                 self.output_path = args.output
                 if not self.output_path.endswith('.xlsm'):
@@ -88,43 +88,25 @@ class SSID:
         """Make appropriate updates to the spreadsheet for a primary manager change
 
         param: args
-            Namespace with `change_primary_manager` and `workbook` defined
+            string with previous and new manager separated by semicolon: `<Previous Manager>;<New Manager>`
 
         return: None 
         """
         try:
             # Alias variables
             wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
-            new_manager = args.change_primary_manager
+            old_manager, new_manager = args.split(';')
 
             # Modify `Acct Info` sheet
             ws = wb['Acct Info']
-            old_manager = ws['B30'].value
+            if not old_manager.lower() == ws['B30'].value.lower():
+                raise ValueError(f'previous primary manager = `{ws["B30"].value}`, expected `{old_manager}`')
             dept = ws['B31'].value
             ws['B28'] = 'Yes'
             ws['B30'] = new_manager
 
             # Modify `Previous Ownership` sheet
-            if not 'Previous Ownership' in wb:
-                wb.create_sheet('Previous Ownership')
-                ws = wb['Previous Ownership']
-                ws['A4'] = 'TITLE'
-                ws['B4'] = 'NAME'
-                ws['C4'] = 'DEPARTMENT'
-                ws['D4'] = 'SIGNATURE & DATE'
-                ws['A6'] = 'Primary Manager'
-                ws['A13'] = 'Secondary Manager'
-                ws['A19'] = 'Primary Account Custodian'
-                ws['A26'] = 'Secondary Account Custodian'
-                ws['A30'] = 'Authorized User(s)'
-                ws['A43'] = 'Authorized User\'s Manager'
-                ws['A47'] = 'ISO Representative(s)'
-
-            ws = wb['Previous Ownership']
-            ws.insert_rows(6)
-            ws.move_range('A7', rows=-1)
-            ws['B6'] = old_manager
-            ws['C6'] = dept
+            self.modify_previous_ownership(wb, 'Primary Manager', name=old_manager, dept=dept)
             
             wb.save(self.tmp_path)
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
@@ -137,8 +119,83 @@ class SSID:
                 print(error)
         
         else:
-            self.logs += f'Manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
+            self.logs += f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
     
+    def change_secondary_manager(self, args):
+        """Make appropriate updates to the spreadsheet for a secondary manager change
+
+        param: args
+            string with previous and new managers separated by semicolon: `<Previous Manager>;<New Manager>`
+
+        return: None 
+        """
+        try:
+            # Alias variables
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            old_manager, new_manager = args.split(';')
+
+            # Modify `Acct Info` sheet
+            ws = wb['Acct Info']
+            if not old_manager.lower() == ws['B32'].value.lower():
+                raise ValueError(f'previous secondary manager = `{ws["B32"].value}`, expected `{old_manager}`')
+            dept = ws['B33'].value
+            ws['B28'] = 'Yes'
+            ws['B32'] = new_manager
+
+            # Modify `Previous Ownership` sheet
+            self.modify_previous_ownership(wb, 'Secondary Manager', name=old_manager, dept=dept)
+            
+            wb.save(self.tmp_path)
+            self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
+        
+        except Exception as e:
+            self.errored = True
+            error = f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}'
+            self.logs += error + '\n'
+            if self.error_logging:
+                print(error)
+            return False
+        
+        else:
+            self.logs += f'Secondary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`\n'
+            return True
+
+    def change_manager(self, args):
+        """Make appropriate updates to the spreadsheet for a primary manager change
+
+        param: args
+            Namespace with `change_manager` defined
+
+        return: None 
+        """
+        try:
+            # Alias variables
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            old_manager, _ = args.change_manager.split(';')
+
+            ws = wb['Acct Info']
+            primary_manager = ws['B30'].value
+            if primary_manager is None:
+                primary_manager = ''
+            secondary_manager = ws['B32'].value
+            if secondary_manager is None:
+                secondary_manager = ''
+            if primary_manager.lower() == old_manager.lower():
+                self.logs += f'change_manager() selected `primary manager` for SSID `{self.name}`\n'
+                self.change_primary_manager(args.change_manager)
+            elif secondary_manager.lower() == old_manager.lower():
+                self.logs += f'change_manager() selected `secondary manager` for SSID `{self.name}`\n'
+                self.change_secondary_manager(args.change_manager)
+            else:
+                raise ValueError(f'Neither primary nor secondary manager matches expected previous manager: `{old_manager}`')
+        
+        except Exception as e:
+            self.errored = True
+            error = f'ERROR: `{self.name}` - SSID.change_manager(): {e}'
+            self.logs += error + '\n'
+            if self.error_logging:
+                print(error)
+
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
         """
@@ -215,6 +272,38 @@ class SSID:
         else:
             self.logs += f'Summary written for SSID `{self.name}` successfully\n'
 
+    def modify_previous_ownership(self, wb, field, name='', dept=''):
+        if not 'Previous Ownership' in wb:
+            wb.create_sheet('Previous Ownership')
+            ws = wb['Previous Ownership']
+            ws['A4'] = 'TITLE'
+            ws['B4'] = 'NAME'
+            ws['C4'] = 'DEPARTMENT'
+            ws['D4'] = 'SIGNATURE & DATE'
+            ws['A6'] = 'Primary Manager'
+            ws['A13'] = 'Secondary Manager'
+            ws['A19'] = 'Primary Account Custodian'
+            ws['A26'] = 'Secondary Account Custodian'
+            ws['A30'] = 'Authorized User(s)'
+            ws['A43'] = 'Authorized User\'s Manager'
+            ws['A47'] = 'ISO Representative(s)'
+        
+        ws = wb['Previous Ownership']
+        row_num = None
+        for cell in ws['A']:
+            if cell.value == field:
+                row_num = int(cell.row)
+                break
+        
+        if row_num is None:
+            raise ValueError(f'ERROR: `{field}` field not found in COL(A) of `Previous Ownership` sheet')
+                    
+        ws.insert_rows(row_num)
+        ws.move_range(f'A{row_num}', rows=-1)
+        ws[f'B{row_num}'] = name
+        ws[f'C{row_num}'] = dept
+
+
     def output(self):
         """Save the spreadsheet to the final output destination
         """
@@ -283,7 +372,17 @@ def parse_args():
     parser.add_argument('-cpm',
                         '--change-primary-manager',
                         type=str,
-                        help='Name of new primary manager')
+                        help='Name of previous and new primary manager. Expected format: `<Previous Manager>;<New Manager>`')
+    
+    parser.add_argument('-csm',
+                        '--change-secondary-manager',
+                        type=str,
+                        help='Name of previous and new secondary manager. Expected format: `<Previous Manager>;<New Manager>`')
+    
+    parser.add_argument('-cm',
+                        '--change-manager',
+                        type=str,
+                        help='Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`')
 
     parser.add_argument('-e',
                         '--error-logging',
@@ -308,6 +407,25 @@ def parse_args():
                         help='Filename for output, or directory to output to if using a file as input')
 
     parsed_args = parser.parse_args()
+
+    # Ensure `-cpm, -csm, -cm` flags are not used together
+    if len([flag for flag in [parsed_args.change_primary_manager, parsed_args.change_secondary_manager, parsed_args.change_manager] if flag is not None]) > 1:
+        raise ValueError(f'INPUT ERROR: Multiple flags for changing managers used. Use just one of `-cpm, --change-primary-manager`, `-csm, --change-secondary-manager`, and `-cm, --change-manager`')
+
+    # Ensure `-cpm, --change-primary-manager` value has proper syntax, including a semicolon separating new and old managers
+    if parsed_args.change_primary_manager is not None and not ';' in parsed_args.change_primary_manager:
+        raise ValueError(f'`INPUT ERROR: -cpm, --change-primary-manager` flag used without proper syntax: `{parsed_args.change_primary_manager}`\n'
+                        +f'\tExpected: `<Previous Manager>;<New Manager>`')
+    
+    # Ensure `-csm, --change-secondary-manager` value has proper syntax, including a semicolon separating new and old managers
+    if parsed_args.change_secondary_manager is not None and not ';' in parsed_args.change_secondary_manager:
+        raise ValueError(f'`INPUT ERROR: -csm, --change-secondary-manager` flag used without proper syntax: `{parsed_args.change_secondary_manager}`\n'
+                        +f'\tExpected: `<Previous Manager>;<New Manager>`')
+    
+    # Ensure `-cm, --change-manager` value has proper syntax, including a semicolon separating new and old managers
+    if parsed_args.change_manager is not None and not ';' in parsed_args.change_manager:
+        raise ValueError(f'INPUT ERROR: `-cm, --change-manager` flag used without proper syntax: `{parsed_args.change_manager}`\n'
+                        +f'\tExpected: `<Previous Manager>;<New Manager>`')
 
     return parsed_args
 
@@ -339,8 +457,16 @@ def execute_changes(args):
     SSIDs = get_ssid_list(args)
 
     if args.change_primary_manager is not None:
+        print('\033[1;34m***Changing primary managers***\033[22;0m')
+        [ssid.change_primary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
+
+    if args.change_secondary_manager is not None:
+        print('\033[1;34m***Changing secondary managers***\033[22;0m')
+        [ssid.change_secondary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
+
+    if args.change_manager is not None:
         print('\033[1;34m***Changing primary manager***\033[22;0m')
-        [ssid.change_primary_manager(args) for ssid in SSIDs if not ssid.errored]
+        [ssid.change_manager(args) for ssid in SSIDs if not ssid.errored]
     
     print('\033[1;34m***Writing change summaries***\033[22;0m')
     [ssid.write_summary() for ssid in SSIDs if not ssid.errored]
@@ -364,8 +490,11 @@ def main():
     """
     status = 0
 
-    args = parse_args()
-    execute_changes(args)
+    try:
+        args = parse_args()
+        execute_changes(args)
+    except Exception as e:
+        print(e)
 
     return status
 

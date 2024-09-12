@@ -25,12 +25,17 @@ $ python3 RequestSSIDChange.py -cpm "New Manager" -f ssid_list -o output_dir
         * The name of the SSID you want to edit the excel file for, or, if the optional `-f` flag is used, a text file with unique SSIDs on each line
 * **Optional Flags**
     * `-cpm, --change-primary-manager`
-        * Name of new primary manager
+        * Name of previous and new primary manager. Expected format: `<Previous Manager>;<New Manager>`
+    * `-csm, --change-secondary-manager`
+        * Name of previous and new secondary manager. Expected format: `<Previous Manager>;<New Manager>`
+    * `-cm, --change-manager`
+        * Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`
     * `-e, --error-logging`
         * Flag to set for error logging
     * `-f, --file-input`
         * Flag to use text file with multiple SSIDs as input, instead of just one
     * `-i, --input-dir`
         * Specify directory to look for SSID spreadsheets in. Defaults to "\\\\wfshq1\\acna\\SSID Forms\\New SSID Forms"
+        "\\wfshq1\acna\SSID Forms\New SSID Forms"
     * `-o, --output`
         * Name of file to output to, or directory if using `-f` flag.
