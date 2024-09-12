@@ -330,7 +330,7 @@ class SSID:
             self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}')
         
         except WindowsError as e:
-            print(f'Failed to delete `tmp` dir: {e}')
+            log(self.master_log_path, f'Failed to delete `tmp` dir: {e}')
 
         else:
             self.log(f'SSID `{self.name}` output successfully')
@@ -438,38 +438,43 @@ def get_ssid_list(args):
     
     return SSIDs
 
+def log(path, message):
+    with open(path, 'a') as f:
+        f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+    print(message)
+
 def execute_changes(args):
     """Initialize list of SSIDs, make appropriate edits to spreadsheets, and save
 
     param: args
         Namespace including `change_primary_manager` and other key details of command line arguments
     """
-    print('\033[1;34m***Initializing SSID objects***\033[22;0m')
+    log(args.log_path, '\033[1;34m***Initializing SSID objects***\033[22;0m')
     SSIDs = get_ssid_list(args)
 
     if args.change_primary_manager is not None:
-        print('\033[1;34m***Changing primary managers***\033[22;0m')
+        log(args.log_path, '\033[1;34m***Changing primary managers***\033[22;0m')
         [ssid.change_primary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
 
     if args.change_secondary_manager is not None:
-        print('\033[1;34m***Changing secondary managers***\033[22;0m')
+        log(args.log_path, '\033[1;34m***Changing secondary managers***\033[22;0m')
         [ssid.change_secondary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
 
     if args.change_manager is not None:
-        print('\033[1;34m***Changing primary manager***\033[22;0m')
+        log(args.log_path, '\033[1;34m***Changing primary manager***\033[22;0m')
         [ssid.change_manager(args) for ssid in SSIDs if not ssid.errored]
     
-    print('\033[1;34m***Writing change summaries***\033[22;0m')
+    log(args.log_path, '\033[1;34m***Writing change summaries***\033[22;0m')
     [ssid.write_summary() for ssid in SSIDs if not ssid.errored]
 
     # Remove legacy drawings
     [ssid.remove_legacy_drawings() for ssid in SSIDs if not ssid.errored]
     
-    print('\033[1;34m***Saving successfully modified files***\033[22;0m')
+    log(args.log_path, '\033[1;34m***Saving successfully modified files***\033[22;0m')
     [ssid.output() for ssid in SSIDs if not ssid.errored]
 
     successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
-    print(f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
+    log(args.log_path, f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
 
 def create_log_file():
     log_path = os.path.join('logs', datetime.now().strftime('%Y-%m-%d_%H%M%S'))
