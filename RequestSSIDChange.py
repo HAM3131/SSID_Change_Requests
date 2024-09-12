@@ -87,6 +87,8 @@ class SSID:
         
     def log_error(self, message):
         self.errored = True
+        if os.path.isfile(self.tmp_path):
+            os.remove(self.tmp_path)
         with open(self.master_log_path, 'a') as f:
             f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
         with open(self.log_path, 'a') as f:
@@ -322,10 +324,13 @@ class SSID:
             else:
                 print(f'SSID `{self.name}` errored during process - cannot save')
             if os.path.isdir('tmp') and len(os.listdir('tmp')) == 0:
-                os.rmdir('tmp')
+                os.removedirs('tmp')
 
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}')
+        
+        except WindowsError as e:
+            print(f'Failed to delete `tmp` dir: {e}')
 
         else:
             self.log(f'SSID `{self.name}` output successfully')
@@ -470,7 +475,7 @@ def create_log_file():
     log_path = os.path.join('logs', datetime.now().strftime('%Y-%m-%d_%H%M%S'))
     if not os.path.isdir(log_path):
         os.makedirs(log_path)
-    log_path = os.path.join(log_path, 'SSID_Changes.log')
+    log_path = os.path.join(log_path, '.SSID_Changes.log')
     with open(log_path, 'w') as f:
         f.write(f'[{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}] Log Created\n')
     return log_path
