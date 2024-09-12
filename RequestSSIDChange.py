@@ -273,6 +273,17 @@ class SSID:
             self.logs += f'Summary written for SSID `{self.name}` successfully\n'
 
     def modify_previous_ownership(self, wb, field, name='', dept=''):
+        """Modify the `Previous Ownership` sheet
+
+        param: wb
+            excel workbook to modify
+        param: field
+            name of the field to enter a new value for (ex: `Primary Manager`)
+        param: name
+            value to place in the NAME column
+        param: dept
+            value to place in the DEPARTMENT column
+        """
         if not 'Previous Ownership' in wb:
             wb.create_sheet('Previous Ownership')
             ws = wb['Previous Ownership']
