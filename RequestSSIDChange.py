@@ -54,13 +54,11 @@ class SSID:
             if args.file_input and args.output is not None:
                 if not os.path.exists(args.output):
                     os.makedirs(args.output)
-                self.output_path = os.path.join(args.output, name + '_' + datetime.today().strftime('%Y-%m-%d') + '.xlsm')
-            elif args.output is not None:
                 self.output_path = args.output
-                if not self.output_path.endswith('.xlsm'):
-                    self.output_path += '.xlsm'
+            elif args.output is not None:
+                self.output_path = args.output + '.xlsm'
             else:
-                self.output_path = name + datetime.today().strftime('%Y-%m-%d') + '.xlsm'
+                self.output_path = '.'
 
             # Create `tmp` directory if not present 
             if not os.path.isdir('tmp'):
@@ -311,6 +309,9 @@ class SSID:
         """Save the spreadsheet to the final output destination
         """
         try:
+            if '.xlsm' not in self.output_path:
+                self.output_path = os.path.join(self.output_path, f'{datetime.now().strftime("%Y-%m-%d_%H%M")}_{self.name}.xlsm')
+
             if not self.errored:
                 with open(self.tmp_path, 'rb') as f:
                     contents = f.read()
@@ -322,6 +323,7 @@ class SSID:
                 print(f'SSID `{self.name}` errored during process - cannot save')
             if os.path.isdir('tmp') and len(os.listdir('tmp')) == 0:
                 os.rmdir('tmp')
+
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}')
 
@@ -330,6 +332,8 @@ class SSID:
 
 def copy_excel_as_xlsm(source_path, output_path):
      try:
+        if os.path.isfile(output_path):
+            os.remove(output_path)
         wb = excel.Workbooks.Open(source_path)
         wb.SaveAs(output_path, 52)
         wb.Close(SaveChanges=False)
