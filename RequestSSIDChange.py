@@ -1,7 +1,7 @@
 # RequestSSIDChange
 # Purpose: Generate Excel sheet for SSID Change requests
 # Author: Henry Manning
-# Version: 0.0.5
+# Version: 0.0.6
 
 import argparse
 import os
@@ -10,7 +10,6 @@ from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side
 from datetime import datetime
 import win32com.client as win32
-import time
 
 excel = win32.gencache.EnsureDispatch('Excel.Application')
 excel.DisplayAlerts=False
@@ -113,12 +112,8 @@ class SSID:
             ws = wb['Acct Info']
             if not old_manager.lower() == ws['B30'].value.lower():
                 raise ValueError(f'previous primary manager = `{ws["B30"].value}`, expected `{old_manager}`')
-            dept = ws['B31'].value
             ws['B28'] = 'Yes'
             ws['B30'] = new_manager
-
-            # Modify `Previous Ownership` sheet
-            self.modify_previous_ownership(wb, 'Primary Manager', name=old_manager, dept=dept)
             
             wb.save(self.tmp_path)
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
@@ -146,12 +141,8 @@ class SSID:
             ws = wb['Acct Info']
             if not old_manager.lower() == ws['B32'].value.lower():
                 raise ValueError(f'previous secondary manager = `{ws["B32"].value}`, expected `{old_manager}`')
-            dept = ws['B33'].value
             ws['B28'] = 'Yes'
             ws['B32'] = new_manager
-
-            # Modify `Previous Ownership` sheet
-            self.modify_previous_ownership(wb, 'Secondary Manager', name=old_manager, dept=dept)
             
             wb.save(self.tmp_path)
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
@@ -263,49 +254,6 @@ class SSID:
 
         else:
             self.log(f'Summary written for SSID `{self.name}` successfully')
-
-    def modify_previous_ownership(self, wb, field, name='', dept=''):
-        """Modify the `Previous Ownership` sheet
-
-        param: wb
-            excel workbook to modify
-        param: field
-            name of the field to enter a new value for (ex: `Primary Manager`)
-        param: name
-            value to place in the NAME column
-        param: dept
-            value to place in the DEPARTMENT column
-        """
-        if not 'Previous Ownership' in wb:
-            wb.create_sheet('Previous Ownership')
-            ws = wb['Previous Ownership']
-            ws['A4'] = 'TITLE'
-            ws['B4'] = 'NAME'
-            ws['C4'] = 'DEPARTMENT'
-            ws['D4'] = 'SIGNATURE & DATE'
-            ws['A6'] = 'Primary Manager'
-            ws['A13'] = 'Secondary Manager'
-            ws['A19'] = 'Primary Account Custodian'
-            ws['A26'] = 'Secondary Account Custodian'
-            ws['A30'] = 'Authorized User(s)'
-            ws['A43'] = 'Authorized User\'s Manager'
-            ws['A47'] = 'ISO Representative(s)'
-        
-        ws = wb['Previous Ownership']
-        row_num = None
-        for cell in ws['A']:
-            if cell.value == field:
-                row_num = int(cell.row)
-                break
-        
-        if row_num is None:
-            raise ValueError(f'ERROR: `{field}` field not found in COL(A) of `Previous Ownership` sheet')
-                    
-        ws.insert_rows(row_num)
-        ws.move_range(f'A{row_num}', rows=-1)
-        ws[f'B{row_num}'] = name
-        ws[f'C{row_num}'] = dept
-
 
     def output(self):
         """Save the spreadsheet to the final output destination
