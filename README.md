@@ -13,10 +13,10 @@ $ pip install openpyxl
 ## Command line
 Example:
 ```
-$ python3 RequestSSIDChange.py -cpm "New Manager" airflow
-    # Modifies spreadsheet for `airflow` SSID to change the primary manager to "New Manager"
+$ python3 RequestSSIDChange.py -cpm "Old Manager;New Manager" airflow
+    # Modifies spreadsheet for `airflow` SSID to change the primary manager from "Old Manager" to "New Manager"
 
-$ python3 RequestSSIDChange.py -cpm "New Manager" -f ssid_list -o output_dir
+$ python3 RequestSSIDChange.py -cpm "Old Manager;New Manager" -f ssid_list -o output_dir
     # Modifies spreadsheets for each SSID listed in `ssid_list` file with a new primary manager and places them inside of `output_dir`
 ```
 
