@@ -80,23 +80,23 @@ class SSID:
             self.log(f'SSID `{self.name}` initialized successfully')
 
     def log(self, message):
-        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]\n'
+        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]'
         with open(self.master_log_path, 'a') as f:
-            f.write(message)
+            f.write(message + '\n')
         with open(self.log_path, 'a') as f:
-            f.write(message)
+            f.write(message + '\n')
         if self.verbose:
             print(message)
         
     def log_error(self, message):
         self.errored = True
-        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]\n'
+        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]'
         if os.path.isfile(self.tmp_path):
             os.remove(self.tmp_path)
         with open(self.master_log_path, 'a') as f:
-            f.write(message)
+            f.write(message + '\n')
         with open(self.log_path, 'a') as f:
-            f.write(message)
+            f.write(message + '\n')
         if self.error_logging:
             print(message)
         
@@ -434,6 +434,7 @@ def execute_changes(args):
 
     successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
     log(args.log_path, f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
+    with open()
 
 def create_log_file():
     log_path = os.path.join('logs', datetime.now().strftime('%Y-%m-%d_%H%M%S'))
