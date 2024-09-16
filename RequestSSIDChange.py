@@ -434,10 +434,10 @@ def execute_changes(args):
 
     successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
     log(args.log_path, f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
-    with open(os.path.join(os.path.dirname(args.log_path), '.successful_edits')) as f:
+    with open(os.path.join(os.path.dirname(args.log_path), '.successful_edits'), 'w') as f:
         for ssid in [ssid for ssid in SSIDs if not ssid.errored]:
             f.write(ssid.name + '\n')
-    with open(os.path.join(os.path.dirname(args.log_path), '.failed_edits')) as f:
+    with open(os.path.join(os.path.dirname(args.log_path), '.failed_edits'), 'w') as f:
         for ssid in [ssid for ssid in SSIDs if ssid.errored]:
             f.write(ssid.name + '\n')
 
