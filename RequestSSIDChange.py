@@ -1,7 +1,7 @@
 # RequestSSIDChange
 # Purpose: Generate Excel sheet for SSID Change requests
 # Author: Henry Manning
-# Version: 0.0.6
+# Version: 0.0.7
 
 import argparse
 import os
@@ -28,6 +28,7 @@ class SSID:
             self.tmp_path = os.path.join('tmp', self.filename)
             self.name = name
             self.error_logging = args.error_logging
+            self.verbose = args.verbose
             self.master_log_path = args.log_path
             self.log_path = os.path.join(os.path.dirname(args.log_path), f'{name}.log')
             self.summary = ''
@@ -79,21 +80,25 @@ class SSID:
             self.log(f'SSID `{self.name}` initialized successfully')
 
     def log(self, message):
+        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]\n'
         with open(self.master_log_path, 'a') as f:
-            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+            f.write(message)
         with open(self.log_path, 'a') as f:
-            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+            f.write(message)
+        if self.verbose:
+            print(message)
         
     def log_error(self, message):
         self.errored = True
+        message = message + f' [{datetime.now().strftime("%H:%M:%S")}]\n'
         if os.path.isfile(self.tmp_path):
             os.remove(self.tmp_path)
         with open(self.master_log_path, 'a') as f:
-            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+            f.write(message)
         with open(self.log_path, 'a') as f:
-            f.write(message + f' [{datetime.now().strftime("%H:%M:%S")}]\n')
+            f.write(message)
         if self.error_logging:
-            print(message + f' [{datetime.now().strftime("%H:%M:%S")}]')
+            print(message)
         
     def change_primary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a primary manager change
@@ -344,6 +349,12 @@ def parse_args():
                         type=str,
                         default=None,
                         help='Filename for output, or directory to output to if using a file as input')
+    
+    parser.add_argument('-v',
+                        '--verbose',
+                        action='store_true',
+                        default=False,
+                        help='Flag to turn on verbose output')
 
     parsed_args = parser.parse_args()
 

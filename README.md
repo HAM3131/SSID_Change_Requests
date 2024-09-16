@@ -39,3 +39,5 @@ $ python3 RequestSSIDChange.py -cpm "New Manager" -f ssid_list -o output_dir
         "\\wfshq1\acna\SSID Forms\New SSID Forms"
     * `-o, --output`
         * Name of file to output to, or directory if using `-f` flag.
+    * `-v, --verbose`
+        * Flag to set for verbose output
