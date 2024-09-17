@@ -8,11 +8,11 @@ import os
 from copy import copy
 from openpyxl import load_workbook
 from openpyxl.styles import Alignment, Border, Side
+from pywintypes import com_error
 from datetime import datetime
 import win32com.client as win32
 
 excel = win32.gencache.EnsureDispatch('Excel.Application')
-excel.DisplayAlerts=False
 
 class SSID:
     def __init__(self, name, args):
@@ -32,7 +32,7 @@ class SSID:
             self.master_log_path = args.log_path
             self.log_path = os.path.join(os.path.dirname(args.log_path), f'{name}.log')
             self.summary = ''
-            self.errored = False
+            self.error_code = 0
 
             # Determine source path
             self.source_path = os.path.join(args.input_dir, self.filename)
@@ -48,7 +48,10 @@ class SSID:
                             max_mtime = mtime
                             self.source_path = full_path
                 else:
-                    raise ValueError(f'No path found to source file for SSID `{name}`')
+                    if os.path.isdir(os.path.join(args.input_dir, '! DELETED !', name)):
+                        raise ValueError(f'No path found to source file for SSID `{name}`. SSID is in `! DELETED !` folder')
+                    else:
+                        raise LookupError(f'No path found to source file for SSID `{name}`. dir `{ssid_folder}` exists: {os.path.isdir(ssid_folder)}')
             
             # Determine output to finally save file
             if args.file_input and args.output is not None:
@@ -74,7 +77,13 @@ class SSID:
                     f.write(contents)
 
         except ValueError as e:
-            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}')
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 2)
+
+        except LookupError as e:
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 1)
+
+        except com_error as e:
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 1)
         
         else:
             self.log(f'SSID `{self.name}` initialized successfully')
@@ -88,8 +97,8 @@ class SSID:
         if self.verbose:
             print(message)
         
-    def log_error(self, message):
-        self.errored = True
+    def log_error(self, message, error_code):
+        self.error_code = error_code
         message = message + f' [{datetime.now().strftime("%H:%M:%S")}]'
         if os.path.isfile(self.tmp_path):
             os.remove(self.tmp_path)
@@ -124,7 +133,7 @@ class SSID:
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', 1)
             
         else:
             self.log(f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
@@ -153,7 +162,7 @@ class SSID:
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}', 1)
             return False
         
         else:
@@ -190,7 +199,7 @@ class SSID:
                 raise ValueError(f'Neither primary nor secondary manager matches expected previous manager: `{old_manager}`')
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_manager(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_manager(): {e}', 1)
 
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
@@ -208,7 +217,7 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}', 1)
         
         else:
             self.log(f'Legacy drawings removed from SSID `{self.name}` successfully')
@@ -255,7 +264,7 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', 1)
 
         else:
             self.log(f'Summary written for SSID `{self.name}` successfully')
@@ -267,7 +276,7 @@ class SSID:
             if '.xlsm' not in self.output_path:
                 self.output_path = os.path.join(self.output_path, f'{datetime.now().strftime("%Y-%m-%d_%H%M")}_{self.name}.xlsm')
 
-            if not self.errored:
+            if self.error_code == 0:
                 with open(self.tmp_path, 'rb') as f:
                     contents = f.read()
                 with open(self.output_path, 'wb') as f:
@@ -280,7 +289,7 @@ class SSID:
                 os.removedirs('tmp')
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}')
+            self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}', 1)
         
         except WindowsError as e:
             log(self.master_log_path, f'Failed to delete `tmp` dir: {e}')
@@ -413,32 +422,47 @@ def execute_changes(args):
 
     if args.change_primary_manager is not None:
         log(args.log_path, '\033[1;34m***Changing primary managers***\033[22;0m')
-        [ssid.change_primary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
+        [ssid.change_primary_manager(args.change_primary_manager) for ssid in SSIDs if ssid.error_code == 0]
 
     if args.change_secondary_manager is not None:
         log(args.log_path, '\033[1;34m***Changing secondary managers***\033[22;0m')
-        [ssid.change_secondary_manager(args.change_primary_manager) for ssid in SSIDs if not ssid.errored]
+        [ssid.change_secondary_manager(args.change_primary_manager) for ssid in SSIDs if ssid.error_code == 0]
 
     if args.change_manager is not None:
         log(args.log_path, '\033[1;34m***Changing primary manager***\033[22;0m')
-        [ssid.change_manager(args) for ssid in SSIDs if not ssid.errored]
+        [ssid.change_manager(args) for ssid in SSIDs if ssid.error_code == 0]
     
     log(args.log_path, '\033[1;34m***Writing change summaries***\033[22;0m')
-    [ssid.write_summary() for ssid in SSIDs if not ssid.errored]
+    [ssid.write_summary() for ssid in SSIDs if ssid.error_code == 0]
 
     # Remove legacy drawings
-    [ssid.remove_legacy_drawings() for ssid in SSIDs if not ssid.errored]
+    log(args.log_path, '\033[1;34m***Removing legacy drawings***\033[22;0m')
+    [ssid.remove_legacy_drawings() for ssid in SSIDs if ssid.error_code == 0]
     
     log(args.log_path, '\033[1;34m***Saving successfully modified files***\033[22;0m')
-    [ssid.output() for ssid in SSIDs if not ssid.errored]
+    [ssid.output() for ssid in SSIDs if ssid.error_code == 0]
 
-    successful_edits = len([ssid for ssid in SSIDs if not ssid.errored])
-    log(args.log_path, f'\033[1;32mFile editing completed -\033[22;0m {successful_edits}/{len(SSIDs)} edited successfully')
+    # Calculate totals for different error codes
+    successful_edits = len([ssid for ssid in SSIDs if ssid.error_code == 0])
+    failed_edits = len([ssid for ssid in SSIDs if ssid.error_code == 1])
+    deleted_ssids = len([ssid for ssid in SSIDs if ssid.error_code == 2])
+
+    # Print meta results
+    log(args.log_path, f'\033[1;32mFile editing completed\033[22;0m - {successful_edits}/{successful_edits + failed_edits} edited successfully')
+    log(args.log_path, f'\033[1;31mSome SSIDs have been deleted in the past\033[22;0m - {deleted_ssids}')
+    
+    # Write list of successfully edited files
     with open(os.path.join(os.path.dirname(args.log_path), '.edits_successful'), 'w') as f:
-        for ssid in [ssid for ssid in SSIDs if not ssid.errored]:
+        for ssid in [ssid for ssid in SSIDs if ssid.error_code == 0]:
             f.write(ssid.name + '\n')
+    
+    # Write list of failed to edit files, or previously deleted files
     with open(os.path.join(os.path.dirname(args.log_path), '.edits_failed'), 'w') as f:
-        for ssid in [ssid for ssid in SSIDs if ssid.errored]:
+        f.write('[FAILURES]\n')
+        for ssid in [ssid for ssid in SSIDs if ssid.error_code == 1]:
+            f.write(ssid.name + '\n')
+        f.write('\n[DELETED]\n')
+        for ssid in [ssid for ssid in SSIDs if ssid.error_code == 2]:
             f.write(ssid.name + '\n')
 
 def create_log_file():
