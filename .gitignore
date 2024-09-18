@@ -7,6 +7,5 @@ logs
 # Files
 test
 test2
-ssid_list
-ssid_list2
+*ssid_list*
 *.xlsm
