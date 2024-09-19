@@ -1,0 +1,9 @@
+from enum import Enum
+
+class SSIDError(Enum):
+    SSID_ERROR = 1
+    SSID_DELETED = 2
+    SSID_CANT_OPEN_SPREADSHEET = 3
+    SSID_MISSING_SPREADSHEET_SHEET = 4
+    SSID_IS_PDF = 5
+    INVALID_PREVIOUS_MANAGER = 6

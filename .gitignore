@@ -1,11 +1,13 @@
 # Directories
+__pycache__
 .venv
 tmp
 output
 logs
 
 # Files
-test
-test2
+test*
+tmp*
 *ssid_list*
+removed_ssids
 *.xlsm

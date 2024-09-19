@@ -11,6 +11,8 @@ from openpyxl.styles import Alignment, Border, Side
 from pywintypes import com_error
 from datetime import datetime
 import win32com.client as win32
+import sys
+from SSIDErrors import SSIDError
 
 excel = win32.gencache.EnsureDispatch('Excel.Application')
 
@@ -53,6 +55,9 @@ class SSID:
                     else:
                         raise LookupError(f'No path found to source file for SSID `{name}`. dir `{ssid_folder}` exists: {os.path.isdir(ssid_folder)}')
             
+            if self.source_path.endswith('.pdf'):
+                raise NameError(f'No path found to source file for SSID `{name}`. File in directory is a pdf: `{self.source_path}`')
+
             # Determine output to finally save file
             if args.file_input and args.output is not None:
                 if not os.path.exists(args.output):
@@ -77,13 +82,16 @@ class SSID:
                     f.write(contents)
 
         except ValueError as e:
-            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 2)
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', SSIDError.SSID_DELETED)
+
+        except NameError as e:
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', SSIDError.SSID_IS_PDF)
 
         except LookupError as e:
-            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 1)
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', SSIDError.SSID_ERROR)
 
         except com_error as e:
-            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', 1)
+            self.log_error(f'ERROR: SSID.__init__(`{name}`, args): {e}', SSIDError.SSID_CANT_OPEN_SPREADSHEET)
         
         else:
             self.log(f'SSID `{self.name}` initialized successfully')
@@ -133,8 +141,11 @@ class SSID:
             self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', 1)
-            
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', SSIDError.SSID_ERROR)
+
+        except KeyError as e:
+           self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
+             
         else:
             self.log(f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
     
@@ -162,9 +173,12 @@ class SSID:
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}', 1)
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}', SSIDError.SSID_ERROR)
             return False
-        
+    
+        except KeyError as e:
+           self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
+
         else:
             self.log(f'Secondary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
             return True
@@ -196,10 +210,13 @@ class SSID:
                 self.log(f'change_manager() selected `secondary manager` for SSID `{self.name}`')
                 self.change_secondary_manager(args.change_manager)
             else:
-                raise ValueError(f'Neither primary nor secondary manager matches expected previous manager: `{old_manager}`')
+                raise ValueError(f'Neither primary ({primary_manager}) nor secondary ({secondary_manager}) manager matches expected previous manager: `{old_manager}`')
         
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.change_manager(): {e}', 1)
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_manager(): {e}', SSIDError.INVALID_PREVIOUS_MANAGER)
+        
+        except:
+            self.log_error(f'ERROR: `{self.name}` - unknown error in `change_manager()`', SSIDError.SSID_ERROR)
 
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
@@ -217,7 +234,7 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}', 1)
+            self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}', SSIDError.SSID_ERROR)
         
         else:
             self.log(f'Legacy drawings removed from SSID `{self.name}` successfully')
@@ -264,7 +281,7 @@ class SSID:
             wb.save(self.tmp_path)
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', 1)
+            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', SSIDError.SSID_ERROR)
 
         else:
             self.log(f'Summary written for SSID `{self.name}` successfully')
@@ -289,7 +306,7 @@ class SSID:
                 os.removedirs('tmp')
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}', 1)
+            self.log_error(f'ERROR: `{self.name}` - SSID.output(): {e}', SSIDError.SSID_ERROR)
         
         except WindowsError as e:
             log(self.master_log_path, f'Failed to delete `tmp` dir: {e}')
@@ -429,7 +446,7 @@ def execute_changes(args):
         [ssid.change_secondary_manager(args.change_primary_manager) for ssid in SSIDs if ssid.error_code == 0]
 
     if args.change_manager is not None:
-        log(args.log_path, '\033[1;34m***Changing primary manager***\033[22;0m')
+        log(args.log_path, '\033[1;34m***Changing managers***\033[22;0m')
         [ssid.change_manager(args) for ssid in SSIDs if ssid.error_code == 0]
     
     log(args.log_path, '\033[1;34m***Writing change summaries***\033[22;0m')
@@ -444,8 +461,8 @@ def execute_changes(args):
 
     # Calculate totals for different error codes
     successful_edits = len([ssid for ssid in SSIDs if ssid.error_code == 0])
-    failed_edits = len([ssid for ssid in SSIDs if ssid.error_code == 1])
-    deleted_ssids = len([ssid for ssid in SSIDs if ssid.error_code == 2])
+    failed_edits = len([ssid for ssid in SSIDs if (ssid.error_code != 1 and ssid.error_code != SSIDError.SSID_DELETED)])
+    deleted_ssids = len([ssid for ssid in SSIDs if ssid.error_code == SSIDError.SSID_DELETED])
 
     # Print meta results
     log(args.log_path, f'\033[1;32mFile editing completed\033[22;0m - {successful_edits}/{successful_edits + failed_edits} edited successfully')
@@ -458,12 +475,13 @@ def execute_changes(args):
     
     # Write list of failed to edit files, or previously deleted files
     with open(os.path.join(os.path.dirname(args.log_path), '.edits_failed'), 'w') as f:
-        f.write('[FAILURES]\n')
-        for ssid in [ssid for ssid in SSIDs if ssid.error_code == 1]:
-            f.write(ssid.name + '\n')
-        f.write('\n[DELETED]\n')
-        for ssid in [ssid for ssid in SSIDs if ssid.error_code == 2]:
-            f.write(ssid.name + '\n')
+        for error_code in SSIDError:
+            ssids_with_error = [ssid for ssid in SSIDs if ssid.error_code == error_code]
+            if len(ssids_with_error) > 0:
+                f.write('[' + str(error_code) + ']\n')
+                for ssid in ssids_with_error:
+                    f.write(ssid.name + '\n')
+                f.write('\n')
 
 def create_log_file():
     log_path = os.path.join('logs', datetime.now().strftime('%Y-%m-%d_%H%M%S'))
@@ -472,6 +490,7 @@ def create_log_file():
     log_path = os.path.join(log_path, '.SSID_Changes.log')
     with open(log_path, 'w') as f:
         f.write(f'[{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}] Log Created\n')
+        f.write(f'ARGS: {sys.argv}')
     return log_path
 
 def main():
