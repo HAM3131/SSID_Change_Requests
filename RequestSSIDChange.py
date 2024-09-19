@@ -135,10 +135,11 @@ class SSID:
             if not old_manager.lower() == ws['B30'].value.lower():
                 raise ValueError(f'previous primary manager = `{ws["B30"].value}`, expected `{old_manager}`')
             ws['B28'] = 'Yes'
+            summary_previous_manager = ws['B30'].value
             ws['B30'] = new_manager
             
             wb.save(self.tmp_path)
-            self.summary += f'Change primary manager to {new_manager} - previous manager was {old_manager}. '
+            self.summary += f'Change primary manager to {new_manager} - previous manager was {summary_previous_manager}. '
         
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', SSIDError.SSID_ERROR)
@@ -147,7 +148,8 @@ class SSID:
            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
              
         else:
-            self.log(f'Primary manager changed from `{old_manager}` to `{new_manager}` for SSID `{self.name}`')
+            self.log(f'{self.name} - {summary_previous_manager}')
+            # self.log(f'Primary manager changed from `{summary_previous_manager}` to `{new_manager}` for SSID `{self.name}`')
     
     def change_secondary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a secondary manager change
@@ -167,10 +169,11 @@ class SSID:
             if not old_manager.lower() == ws['B32'].value.lower():
                 raise ValueError(f'previous secondary manager = `{ws["B32"].value}`, expected `{old_manager}`')
             ws['B28'] = 'Yes'
+            summary_previous_manager = ws['B32'].value
             ws['B32'] = new_manager
             
             wb.save(self.tmp_path)
-            self.summary += f'Change secondary manager to {new_manager} - previous manager was {old_manager}. '
+            self.summary += f'Change secondary manager to {new_manager} - previous manager was {summary_previous_manager}. '
         
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.change_secondary_manager(): {e}', SSIDError.SSID_ERROR)
@@ -461,7 +464,7 @@ def execute_changes(args):
 
     # Calculate totals for different error codes
     successful_edits = len([ssid for ssid in SSIDs if ssid.error_code == 0])
-    failed_edits = len([ssid for ssid in SSIDs if (ssid.error_code != 1 and ssid.error_code != SSIDError.SSID_DELETED)])
+    failed_edits = len([ssid for ssid in SSIDs if (ssid.error_code != 0 and ssid.error_code != 1 and ssid.error_code != SSIDError.SSID_DELETED)])
     deleted_ssids = len([ssid for ssid in SSIDs if ssid.error_code == SSIDError.SSID_DELETED])
 
     # Print meta results
