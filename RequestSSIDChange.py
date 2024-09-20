@@ -148,8 +148,7 @@ class SSID:
            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_manager(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
              
         else:
-            self.log(f'{self.name} - {summary_previous_manager}')
-            # self.log(f'Primary manager changed from `{summary_previous_manager}` to `{new_manager}` for SSID `{self.name}`')
+            self.log(f'Primary manager changed from `{summary_previous_manager}` to `{new_manager}` for SSID `{self.name}`')
     
     def change_secondary_manager(self, args):
         """Make appropriate updates to the spreadsheet for a secondary manager change
