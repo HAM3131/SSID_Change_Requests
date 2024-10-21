@@ -139,6 +139,7 @@ class SSID:
             ws['B30'] = new_manager
             
             wb.save(self.tmp_path)
+            wb.close()
             self.summary += f'Change primary manager to {new_manager} - previous manager was {summary_previous_manager}. '
         
         except ValueError as e:
@@ -172,6 +173,7 @@ class SSID:
             ws['B32'] = new_manager
             
             wb.save(self.tmp_path)
+            wb.close()
             self.summary += f'Change secondary manager to {new_manager} - previous manager was {summary_previous_manager}. '
         
         except ValueError as e:
@@ -240,6 +242,7 @@ class SSID:
             ws['B28'] = 'Yes'
 
             wb.save(self.tmp_path)
+            wb.close()
             self.summary += f'Change secondary manager to {new_custodian} - previous manager was {current_custodian}. '
 
         except ValueError as e:
@@ -276,6 +279,7 @@ class SSID:
             ws['B28'] = 'Yes'
 
             wb.save(self.tmp_path)
+            wb.close()
             self.summary += f'Change authorized user to {new_user} - previous user was {current_user}. '
 
         except ValueError as e:
@@ -306,6 +310,7 @@ class SSID:
             
             # Save workbook back to `tmp` folder
             wb.save(self.tmp_path)
+            wb.close()
 
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.remove_legacy_drawings(): {e}', SSIDError.SSID_ERROR)
@@ -353,6 +358,7 @@ class SSID:
 
             # Save workbook
             wb.save(self.tmp_path)
+            wb.close()
 
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', SSIDError.SSID_ERROR)
