@@ -24,12 +24,16 @@ $ python3 RequestSSIDChange.py -cpm "Old Manager;New Manager" -f ssid_list -o ou
     * `filename`
         * The name of the SSID you want to edit the excel file for, or, if the optional `-f` flag is used, a text file with unique SSIDs on each line
 * **Optional Flags**
+    * `-cau, --change-authorized-users`
+        * Name of previous and new authorized user. Expected format: `<Previous User>;<New User>`
+    * `-cm, --change-manager`
+        * Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`
+    * `-cpac, --change-primary-account-custodian`
+        * Name of previous and new primary account custodian. Expected format: `<Previous Custodian>;<New Custodian>`
     * `-cpm, --change-primary-manager`
         * Name of previous and new primary manager. Expected format: `<Previous Manager>;<New Manager>`
     * `-csm, --change-secondary-manager`
         * Name of previous and new secondary manager. Expected format: `<Previous Manager>;<New Manager>`
-    * `-cm, --change-manager`
-        * Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`
     * `-e, --error-logging`
         * Flag to set for error logging
     * `-f, --file-input`

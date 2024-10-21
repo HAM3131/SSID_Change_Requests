@@ -220,6 +220,78 @@ class SSID:
         except:
             self.log_error(f'ERROR: `{self.name}` - unknown error in `change_manager()`', SSIDError.SSID_ERROR)
 
+    def change_primary_account_custodian(self, args):
+        try:
+            # Alias variables
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            old_custodian, new_custodian = args.split(';')
+
+            ws = wb['Acct Info']
+            row = find_row(ws, 'A', 'Primary Acct Custodian')
+            if row is None:
+                raise TypeError('A row matching `Primary Acct Custodian` could not be found.')
+
+            current_custodian = ws[f'B{row}'].value
+
+            if not current_custodian == old_custodian and not old_custodian == 'any':
+                raise ValueError(f'previous primary account custodian = `{current_custodian}`, expected `{old_custodian}`')
+
+            ws[f'B{row}'] = new_custodian
+            ws['B28'] = 'Yes'
+
+            wb.save(self.tmp_path)
+            self.summary += f'Change secondary manager to {new_custodian} - previous manager was {current_custodian}. '
+
+        except ValueError as e:
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_account_custodian(): {e}', SSIDError.SSID_ERROR)
+            return False
+    
+        except KeyError as e:
+           self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_account_custodian(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
+
+        except TypeError as e:
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_account_custodian(): {e}', SSIDError.MISSING_ROW)
+
+        else:
+            self.log(f'Primary account custodian changed from `{old_custodian}` to `{new_custodian}` for SSID `{self.name}`')
+            return True
+    
+    def change_authorized_users(self, args):
+        try:
+            # Alias variables
+            wb = load_workbook(self.tmp_path, read_only=False, keep_vba=True)
+            old_user, new_user = args.split(';')
+
+            ws = wb['Acct Info']
+            row = find_row(ws, 'A', 'Authorized Users')
+            if row is None:
+                raise TypeError('A row matching `Authorized Users` could not be found.')
+
+            current_user = ws[f'B{row}'].value
+
+            if not current_user == old_user and not new_user == 'any':
+                raise ValueError(f'previous authorized user = `{current_user}`, expected `{old_user}`')
+
+            ws[f'B{row}'] = new_user
+            ws['B28'] = 'Yes'
+
+            wb.save(self.tmp_path)
+            self.summary += f'Change authorized user to {new_user} - previous user was {current_user}. '
+
+        except ValueError as e:
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_authorized_users(): {e}', SSIDError.SSID_ERROR)
+            return False
+    
+        except KeyError as e:
+           self.log_error(f'ERROR: `{self.name}` - SSID.change_authorized_users(): {e}', SSIDError.SSID_MISSING_SPREADSHEET_SHEET)
+
+        except TypeError as e:
+            self.log_error(f'ERROR: `{self.name}` - SSID.change_authorized_users(): {e}', SSIDError.MISSING_ROW)
+
+        else:
+            self.log(f'Authorized user changed from `{old_user}` to `{new_user}` for SSID `{self.name}`')
+            return True
+
     def remove_legacy_drawings(self):
         """Remove the broken legacy drawings on sheets `DB2 UNIX`, `Mainframe`, and `Other`
         """
@@ -316,6 +388,25 @@ class SSID:
         else:
             self.log(f'SSID `{self.name}` output successfully')
 
+def find_row(sheet, column, search_string):
+    """Find the row in the given column of the sheet which contains a specific string
+
+    param: sheet
+        the spreadsheet to search in
+    param: column
+        the column to search in
+    param: search_string
+        the precise string to look for
+    
+    return:
+        the row number in string format if found, or None if not found
+    """
+    for row in sheet.iter_rows(min_col=column, max_col=column):
+        for cell in row:
+            if cell.value == search_string:
+                return cell.row
+    return None
+
 def copy_excel_as_xlsm(source_path, output_path):
      try:
         if os.path.isfile(output_path):
@@ -340,7 +431,22 @@ def parse_args():
     parser.add_argument('filename',
                         type=str,
                         help='Name of the SSID being managed')
-                        
+
+    parser.add_argument('-cau',
+                        '--change-authorized-users',
+                        type=str,
+                        help='Name of previou and new authorized user. Expected format: `<Previous User>;<New User>`')
+
+    parser.add_argument('-cm',
+                        '--change-manager',
+                        type=str,
+                        help='Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`')
+
+    parser.add_argument('-cpac',
+                        '--change-primary-account-custodian',
+                        type=str,
+                        help='Name of previous and new primary account custodian.  Expected format: `<Previous Custodian>;<New Custodian>`')
+
     parser.add_argument('-cpm',
                         '--change-primary-manager',
                         type=str,
@@ -351,11 +457,6 @@ def parse_args():
                         type=str,
                         help='Name of previous and new secondary manager. Expected format: `<Previous Manager>;<New Manager>`')
     
-    parser.add_argument('-cm',
-                        '--change-manager',
-                        type=str,
-                        help='Name of previous and new manager (either primary or secondary). Expected format: `<Previous Manager>;<New Manager>`')
-
     parser.add_argument('-e',
                         '--error-logging',
                         action='store_true',
@@ -450,6 +551,14 @@ def execute_changes(args):
     if args.change_manager is not None:
         log(args.log_path, '\033[1;34m***Changing managers***\033[22;0m')
         [ssid.change_manager(args) for ssid in SSIDs if ssid.error_code == 0]
+    
+    if args.change_primary_account_custodian is not None:
+        log(args.log_path, '\033[1;34m***Changing primary account custodians***\033[22;0m')
+        [ssid.change_primary_account_custodian(args.change_primary_account_custodian) for ssid in SSIDs if ssid.error_code == 0]
+    
+    if args.change_authorized_users is not None:
+        log(args.log_path, '\033[1;34m***Changing authorized users***\033[22;0m')
+        [ssid.change_authorized_users(args.change_authorized_users) for ssid in SSIDs if ssid.error_code == 0]
     
     log(args.log_path, '\033[1;34m***Writing change summaries***\033[22;0m')
     [ssid.write_summary() for ssid in SSIDs if ssid.error_code == 0]
