@@ -237,6 +237,11 @@ class SSID:
 
             if not current_custodian == old_custodian and not old_custodian == 'any':
                 raise ValueError(f'previous primary account custodian = `{current_custodian}`, expected `{old_custodian}`')
+            
+
+            if current_custodian == new_custodian:
+                self.log(f'Primary Custodian `{new_custodian}` already set for SSID {self.name}. No change.')
+                return
 
             ws[f'B{row}'] = new_custodian
             ws['B28'] = 'Yes'
@@ -255,6 +260,9 @@ class SSID:
         except TypeError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.change_primary_account_custodian(): {e}', SSIDError.MISSING_ROW)
 
+        except:
+            self.log_error(f'ERROR: `{self.name}` - unknown error in `change_manager()`', SSIDError.SSID_ERROR)
+
         else:
             self.log(f'Primary account custodian changed from `{old_custodian}` to `{new_custodian}` for SSID `{self.name}`')
             return True
@@ -266,21 +274,36 @@ class SSID:
             old_user, new_user = args.split(';')
 
             ws = wb['Acct Info']
-            row = find_row(ws, 'A', 'Authorized Users')
+            row = int(find_row(ws, 'A', 'Authorized Users'))
             if row is None:
                 raise TypeError('A row matching `Authorized Users` could not be found.')
 
-            current_user = ws[f'B{row}'].value
+            empty_rows = 0
+            while ws[f'A{row + empty_rows+1}'].value is None:
+                empty_rows += 1
+            current_users = []
+            for i in range(empty_rows+1):
+                current_user = ws[f'B{row + i}'].value
+                if current_user is not None:
+                    current_users.append(current_user)
 
-            if not current_user == old_user and not new_user == 'any':
-                raise ValueError(f'previous authorized user = `{current_user}`, expected `{old_user}`')
+            if not old_user in current_users and not old_user == 'any':
+                raise ValueError(f'previous authorized users = `{current_users}`, expected `{old_user}` to exist')
+            
+            if new_user in current_users:
+                self.log(f'Authorized user `{new_user}` already present for SSID {self.name}. No change.')
+                wb.close()
+                return
+            
+            for i in range(empty_rows+1):
+                ws[f'B{row + i}'] = ''
 
             ws[f'B{row}'] = new_user
             ws['B28'] = 'Yes'
 
             wb.save(self.tmp_path)
             wb.close()
-            self.summary += f'Change authorized user to {new_user} - previous user was {current_user}. '
+            self.summary += f'Change authorized user to {new_user} - previous users were {current_users}. '
 
         except ValueError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.change_authorized_users(): {e}', SSIDError.SSID_ERROR)
@@ -291,6 +314,9 @@ class SSID:
 
         except TypeError as e:
             self.log_error(f'ERROR: `{self.name}` - SSID.change_authorized_users(): {e}', SSIDError.MISSING_ROW)
+
+        except:
+            self.log_error(f'ERROR: `{self.name}` - unknown error in `change_manager()`', SSIDError.SSID_ERROR)
 
         else:
             self.log(f'Authorized user changed from `{old_user}` to `{new_user}` for SSID `{self.name}`')
@@ -361,7 +387,7 @@ class SSID:
             wb.close()
 
         except ValueError as e:
-            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', SSIDError.SSID_ERROR)
+            self.log_error(f'ERROR: `{self.name}` - SSID.write_summary(): {e}', SSIDError.NO_CHANGES)
 
         else:
             self.log(f'Summary written for SSID `{self.name}` successfully')
@@ -407,10 +433,9 @@ def find_row(sheet, column, search_string):
     return:
         the row number in string format if found, or None if not found
     """
-    for row in sheet.iter_rows(min_col=column, max_col=column):
-        for cell in row:
-            if cell.value == search_string:
-                return cell.row
+    for cell in sheet[column]:
+        if cell.value == search_string:
+            return cell.row
     return None
 
 def copy_excel_as_xlsm(source_path, output_path):

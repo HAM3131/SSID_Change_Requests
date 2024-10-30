@@ -8,3 +8,4 @@ class SSIDError(Enum):
     SSID_IS_PDF = 5
     INVALID_PREVIOUS_MANAGER = 6
     MISSING_ROW = 7
+    NO_CHANGES = 8
